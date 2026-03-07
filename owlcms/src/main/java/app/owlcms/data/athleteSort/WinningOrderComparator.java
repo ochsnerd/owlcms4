@@ -626,7 +626,7 @@ public class WinningOrderComparator extends AbstractLifterComparator implements 
 			return -compare; // we want reverse order - smaller comes after
 		}
 
-		return tieBreak(lifter1, lifter2);
+		return totalTieBreak(lifter1, lifter2);
 	}
 
 	/**
@@ -807,6 +807,51 @@ public class WinningOrderComparator extends AbstractLifterComparator implements 
 		return competitionTime1.compareTo(competitionTime2);
 	}
 
+	private int totalTieBreak(Athlete lifter1, Athlete lifter2) {
+		int compare;
+		if (lifter1 == null || lifter2 == null) {
+			return lifter1 == null ? 1 : 0;
+		}
+
+		compare = compareCompetitionSessionTime(lifter1, lifter2);
+		traceComparison("totalTieBreak compareCompetitionSessionTime", lifter1, lifter2, compare);
+		if (compare != 0) {
+			return compare;
+		}
+
+		compare = compareBestSnatch(lifter1, lifter2);
+		traceComparison("totalTieBreak compareBestSnatch", lifter1, lifter2, compare);
+		if (compare != 0) {
+			return -compare; // higher snatch means the tied total was reached earlier.
+		}
+
+		return tieBreakSameSession(lifter1, lifter2);
+	}
+
+	private int tieBreakSameSession(Athlete lifter1, Athlete lifter2) {
+		int compare;
+
+		compare = compareBestCleanJerkAttemptNumber(lifter1, lifter2);
+		traceComparison("tieBreakSameSession compareBestCleanJerkAttemptNumber", lifter1, lifter2, compare);
+		if (compare != 0) {
+			return compare; // earlier best attempt wins
+		}
+
+		compare = comparePreviousAttempts(lifter1.getBestCleanJerkAttemptNumber(), true, lifter1, lifter2);
+		traceComparison("tieBreakSameSession comparePreviousAttempts", lifter1, lifter2, compare);
+		if (compare != 0) {
+			return compare; // smaller previous attempts were lifted earlier.
+		}
+
+		compare = compareStartNumber(lifter1, lifter2);
+		traceComparison("tieBreakSameSession compareStartNumber", lifter1, lifter2, compare);
+		if (compare != 0) {
+			return compare;
+		}
+
+		return ObjectUtils.compare(lifter1.getId(), lifter2.getId());
+	}
+
 	/**
 	 * Processing shared between all coefficient-based rankings
 	 *
@@ -826,12 +871,9 @@ public class WinningOrderComparator extends AbstractLifterComparator implements 
 			compare = compareBestCleanJerkTime(lifter1, lifter2);
 			Group group1 = lifter1.getGroup();
 			Group group13 = lifter2.getGroup();
-			// if (lifter1.getCategory().getCode().equals("Open_F64") && lifter1.getTotal() > 210) {
 			traceComparison("tiebreak compareBestCleanJerkTime", lifter1, group1, lifter2, group13, compare);
-			// }
 			if (compare != 0) {
-				// <0 means lifter1 earlier than lifter2
-				return compare; // earlier is better, rank 1 is better than rank 2
+				return compare;
 			}
 		}
 
@@ -860,31 +902,7 @@ public class WinningOrderComparator extends AbstractLifterComparator implements 
 			return compare; // smaller cj, when total is the same, means total was reached earlier.
 		}
 
-		// same clean and jerk, earlier attempt wins
-		compare = compareBestCleanJerkAttemptNumber(lifter1, lifter2);
-		traceComparison("tiebreak compareBestCleanJerkAttemptNumber", lifter1, lifter2, compare);
-		if (compare != 0) {
-			return compare; // earlier best attempt wins
-		}
-
-		// determine who lifted best clean and jerk first
-		compare = comparePreviousAttempts(lifter1.getBestCleanJerkAttemptNumber(), true, lifter1, lifter2);
-		traceComparison("tiebreak comparePreviousAttempts", lifter1, lifter2, compare);
-		if (compare != 0) {
-			return compare; // compare attempted weights (prior to best attempt), smaller first
-		}
-
-		// if equality within a group, smallest lot number wins (same session, same
-		// category, same weight, same attempt) -- smaller lot lifted first.
-		compare = compareStartNumber(lifter1, lifter2);
-		traceComparison("tiebreak compareStartNumber", lifter1, lifter2, compare);
-		if (compare != 0) {
-			return compare; // compare attempted weights (prior to best attempt), smaller first
-		}
-
-		// if no lot number, we get weird results. we need a stable comparison
-		compare = ObjectUtils.compare(lifter1.getId(), lifter2.getId());
-		return compare;
+		return tieBreakSameSession(lifter1, lifter2);
 
 	}
 

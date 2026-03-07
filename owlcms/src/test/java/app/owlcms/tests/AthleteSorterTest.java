@@ -28,6 +28,7 @@ import app.owlcms.data.athlete.Gender;
 import app.owlcms.data.athleteSort.AthleteSorter;
 import app.owlcms.data.athleteSort.Ranking;
 import app.owlcms.data.athleteSort.WinningOrderComparator;
+import app.owlcms.data.group.Group;
 import app.owlcms.data.config.Config;
 import app.owlcms.data.jpa.JPAService;
 import app.owlcms.fieldofplay.FieldOfPlay;
@@ -291,6 +292,50 @@ public class AthleteSorterTest {
         } finally {
             simpsonR.setValidation(true);
             schneiderF.setValidation(true);
+        }
+    }
+
+    @Test
+    public void totalTieBreakUsesSnatchBeforeFinalCleanJerk() {
+        Athlete higherSnatch = new Athlete();
+        higherSnatch.setId(1001L);
+        higherSnatch.setLastName("HigherSnatch");
+        higherSnatch.setGender(Gender.M);
+        higherSnatch.setStartNumber(1);
+
+        Athlete lowerSnatch = new Athlete();
+        lowerSnatch.setId(1002L);
+        lowerSnatch.setLastName("LowerSnatch");
+        lowerSnatch.setGender(Gender.M);
+        lowerSnatch.setStartNumber(2);
+
+        Group session = new Group();
+        higherSnatch.setGroup(session);
+        lowerSnatch.setGroup(session);
+
+        higherSnatch.setValidation(false);
+        lowerSnatch.setValidation(false);
+        try {
+            higherSnatch.setSnatch1ActualLift("85");
+            higherSnatch.setSnatch2ActualLift("0");
+            higherSnatch.setSnatch3ActualLift("0");
+            higherSnatch.setCleanJerk1ActualLift("108");
+            higherSnatch.setCleanJerk2ActualLift("110");
+            higherSnatch.setCleanJerk3ActualLift("0");
+
+            lowerSnatch.setSnatch1ActualLift("83");
+            lowerSnatch.setSnatch2ActualLift("0");
+            lowerSnatch.setSnatch3ActualLift("0");
+            lowerSnatch.setCleanJerk1ActualLift("0");
+            lowerSnatch.setCleanJerk2ActualLift("0");
+            lowerSnatch.setCleanJerk3ActualLift("110");
+
+            WinningOrderComparator comparator = new WinningOrderComparator(Ranking.TOTAL, true);
+            assertEquals(-1, Integer.signum(comparator.compare(higherSnatch, lowerSnatch)));
+            assertEquals(1, Integer.signum(comparator.compare(lowerSnatch, higherSnatch)));
+        } finally {
+            higherSnatch.setValidation(true);
+            lowerSnatch.setValidation(true);
         }
     }
 
